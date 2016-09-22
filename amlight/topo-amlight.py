@@ -7,7 +7,7 @@ Resources:
     Mininet sample of custom topology (two host/switch example)
     Mininet sample of VLANHost
     Mininet tutorial on Setting Performance Parameters
-		AmLight topology @ http://amlight.net/wp-content/uploads/2016/06/AMLIGHTLinks-100G-20160815.pdf
+    AmLight topology @ http://amlight.net/wp-content/uploads/2016/06/AMLIGHTLinks-100G-20160815.pdf
 
 Dependencies:
     This class depends on the "vlan" package
