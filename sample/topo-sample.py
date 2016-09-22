@@ -23,8 +23,9 @@ class VLANHost( Host ):
 	"Host connected to VLAN interface(s)"
 	
 	def config( self, hostid, vlans=None, **params ):
-		"""Configure VLANHost according to (optional) parameters:
-		   vlan: VLAN ID for default interface"""
+		"""Configure VLANHost according to parameters:
+		   hostid: The datapath ID for the host, used for IP configuration
+		   vlans (optional): VLAN IDs for default interface"""
 		
 		r = super( VLANHost, self ).config( **params )
 		
@@ -71,7 +72,7 @@ class VLANSampleTopo( Topo ):
 		Topo.__init__( self )
 	
 		# Add switches
-		# NOTE: Naming convention seems to require numerals at the end of switch names.
+		# NOTE: Naming convention seems to require numbers at the end of switch names.
 		swA = self.addSwitch( 'sw1' )
 		swB = self.addSwitch( 'sw2' )
 		swC = self.addSwitch( 'sw3' )
