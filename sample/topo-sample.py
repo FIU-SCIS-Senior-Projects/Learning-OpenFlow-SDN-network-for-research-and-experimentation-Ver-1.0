@@ -18,15 +18,14 @@ Usage:
 
 from mininet.node import Host
 from mininet.topo import Topo
-from mininet.util import quietRun
-from mininet.log import error
 
 class VLANHost( Host ):
 	"Host connected to VLAN interface(s)"
 	
 	def config( self, hostid, vlans=list(), **params ):
-		"""Configure VLANHost according to (optional) parameters:
-		   vlan: VLAN ID for default interface"""
+		"""Configure VLANHost according to parameters:
+		   hostid: The datapath ID for the host, used for IP configuration
+		   vlans (optional): VLAN IDs for default interface"""
 		
 		r = super( VLANHost, self ).config( **params )
 		
@@ -44,16 +43,36 @@ class VLANHost( Host ):
 hosts = { 'vlan': VLANHost }
 
 class VLANSampleTopo( Topo ):
-	"""Sample topology that uses hosts in multiple VLANs
+	"""
+	   Sample topology that uses hosts in multiple VLANs connected to a network of switches.
 	
-	   The topology has a 5 switches. There are multiple VLANs with
-	   usually 2 hosts in each, all connected in a loop. """
+	   Visual:
+	      hE                 hA
+	        \               /
+	        swE --------- swA
+	         | \           |
+	         |   \         |
+	         |     \       |
+	        swD -- swC -- swB
+	        /       |       \
+	      hD       hC       hB
+	   
+	   VLANs:
+	     10: hA, hB
+	     20: hA, hC
+	     30: hB, hC
+	     40: hC, hD
+	     50: hC, hE
+	     60: hD, hE
+	     70: hE, hA
+	"""
 	
 	# sample topology
 	def __init__( self ):
 		Topo.__init__( self )
 	
 		# Add switches
+		# NOTE: Naming convention seems to require numbers at the end of switch names.
 		swA = self.addSwitch( 'sw1' )
 		swB = self.addSwitch( 'sw2' )
 		swC = self.addSwitch( 'sw3' )
@@ -68,14 +87,14 @@ class VLANSampleTopo( Topo ):
 		self.addLink( swE, swA )
 		self.addLink( swE, swC )
 	
-	        # Add hosts 
+		# Add hosts 
 		hA = self.addHost( 'hA', cls=VLANHost, hostid=1, vlans=[ 10, 20, 70 ] )
 		hB = self.addHost( 'hB', cls=VLANHost, hostid=2, vlans=[ 10, 30 ] )
 		hC = self.addHost( 'hC', cls=VLANHost, hostid=3, vlans=[ 20, 30, 40, 50 ] )
 		hD = self.addHost( 'hD', cls=VLANHost, hostid=4, vlans=[ 40, 60 ] )
 		hE = self.addHost( 'hE', cls=VLANHost, hostid=5, vlans=[ 50, 60, 70 ] )
 	
-	        # Add host links
+		# Add host links
 		self.addLink( hA, swA )
 		self.addLink( hB, swB )
 		self.addLink( hC, swC )
