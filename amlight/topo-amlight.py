@@ -15,7 +15,7 @@ Dependencies:
 
 Usage:
     From the command line:
-        sudo mn --custom topo-amlight.py --topo=amlight
+        sudo mn --custom topo-amlight.py --topo=amlight --link=tc
 """
 
 from mininet.node import Host
@@ -25,7 +25,7 @@ from mininet.link import TCLink
 class VLANHost( Host ):
 	"Host connected to VLAN interface(s)"
 	
-	def config( self, hostid, vlans=None, **params ):
+	def config( self, hostid, vlans=list(), **params ):
 		"""Configure VLANHost according to parameters:
 		   hostid: The datapath ID for the host, used for IP configuration
 		   vlans (optional): VLAN IDs for default interface"""
@@ -77,6 +77,7 @@ class AmLightTopo( Topo ):
 	
 		# Add switch links
 		# NOTE: Bandwidth (bw) is in Mbps
+		# TODO: Find out what to do about bandwidth, as accepted values are between 0 and 1000.
 		self.addLink( swMia, swFor, bw= 10000 )
 		self.addLink( swMia, swSan, bw= 10000 )
 		self.addLink( swMia, swSao, bw= 10000 )
@@ -93,6 +94,7 @@ class AmLightTopo( Topo ):
 		hSao = self.addHost( 'hSao', cls=VLANHost, hostid=4 )
 	
 		# Add host links
+		# TODO: Find out if bandwidth needed for these links.
 		self.addLink( hMia, swMia )
 		self.addLink( hFor, swFor )
 		self.addLink( hSan, swSan )
