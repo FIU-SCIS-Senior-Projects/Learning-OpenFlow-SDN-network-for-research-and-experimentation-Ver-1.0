@@ -24,7 +24,7 @@ from mininet.log import error
 class VLANHost( Host ):
 	"Host connected to VLAN interface(s)"
 	
-	def config( self, hostid, vlans=None, **params ):
+	def config( self, hostid, vlans=list(), **params ):
 		"""Configure VLANHost according to (optional) parameters:
 		   vlan: VLAN ID for default interface"""
 		
