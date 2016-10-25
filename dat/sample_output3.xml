@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<testsuite errors="1" failures="1" name="sample_class14.SampleProtocol32-20161023203932" tests="2" time="11.079">
+        <testcase classname="sample_class14.SampleProtocol32" name="runTest" time="4.079"/>
+        <testcase classname="sample_class14.SampleProtocol36" name="runTest" time="7.000"/>
+        <system-out>
+<![CDATA[]]>    </system-out>
+        <system-err>
+<![CDATA[(S)(S)]]>      </system-err>
+</testsuite>
