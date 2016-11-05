@@ -1,0 +1,295 @@
+import json
+import csv
+import sys
+import os
+import subprocess
+
+"""
+    DESIGN DETAILS: 
+    CLI command:
+    python ryu_compatibility_test.py -p path/to/profile
+    CLI arguments:
+      -c path/to/config
+      -p path/to/profile
+      -v verbose messages on
+
+    Configuration file at predetermined point or given as argument is:
+      - default location - home directory as .ryu_testing.conf
+      - JSON file containing:
+        > working directory
+        > ryu testing configurations
+
+    Working directory contains directories for each switch model.
+    Each switch model directory contains two files:
+      model.json - Detailed test report
+      model.csv - Simplified test report (for easy exporting and viewing)
+
+    Profile is provided by the user in JSON file:
+      - model name
+      - OpenFlow version
+      - required switch compatibility
+        > NOTE: For name of features to test, see TODO
+
+    NOTE: Please run this on c0 of Ryu mininet xterm so Ryu testing may run
+          correctly.
+    NOTE: During Ryu testing, default port values are used for sending and
+          receiving ports.
+
+    RESOURCES:
+     - Python API Library
+     - Ryu Test Tool Usage Examples:
+        https://osrg.github.io/ryu-book/en/html/switch_test_tool.html
+"""
+
+def fatal_error(msg):
+    print 'ERROR: {}'.format(msg)
+    exit(1)
+
+verbose = False
+
+def verbose_msg(msg):
+    global verbose
+    if verbose:
+        print msg
+
+# IDEA: results in database instead
+# have a working directory (can make better later)
+config = {
+    'directory': '{}/ryu_results'.format(os.environ['HOME']),
+  }
+
+"""
+    TODO: Use external config file for any configurations for ryu testing, maybe profile as well
+"""
+def load_config(config_path):
+    global config
+    # if doesn't exist, create the default config file
+    if not os.path.exists(config_path):
+        verbose_msg('Config: Config file {} not found. Generating default config at location.'.format(config_path))
+        with open(config_path, 'w') as config_file:
+            json.dump(config, config_file, sort_keys=True)
+
+    verbose_msg('Config: Loading config file {}.'.format(config_path))
+    with open(config_path, 'r') as config_file:
+        config = json.load(config_file)
+
+    # TODO check if any missing, if so, use default settings for missing keys
+    # TODO update as less/more keys are used for config
+
+    verbose_msg('Config: {} loaded successfully.'.format(config_path))
+
+profile = None
+
+"""
+   
+"""
+def load_profile(profile_path):
+    global profile
+    if not os.path.exists(profile_path):
+        fatal_error('Profile file {} not found.'.format(profile_path))
+
+    verbose_msg('Profile: Loading profile file {}.'.format(profile_path))
+    with open(profile_path, 'r') as profile_file:
+        profile = json.load(profile_file)
+
+    # TODO: update as less/more keys are used for profile
+    profile_keys = ['model', 'of_version', 'compatibility']
+    missing_keys = []
+    for key in profile_keys:
+        if key not in profile:
+            missing_keys.append(key)
+    if len(missing_keys) > 0:
+        msg = 'Profile file {} is missing necessary keys.'.format(profile_path)
+        for key in missing_keys:
+            msg += '\nMissing {}'.format(key)
+        fatal_error(msg)
+
+    verbose_msg('Profile: {} loaded successfully'.format(profile_path))
+        
+
+"""
+    create_dir:
+    Function to create a directory if it doesn't exist.
+    Throws OSError or crashes on failure.
+"""
+def create_dir(dir_to_create):
+    if not os.path.exists(dir_to_create):
+        verbose_msg('Misc: Creating directory {}'.format(dir_to_create))
+        os.makedirs(dir_to_create)
+    elif not os.path.isdir(dir_to_create):
+        fatal_error('{} already exists, but is not a directory.'\
+                .format(dir_to_create))
+
+"""
+    Check if results already exist for the model,
+    if not, get results by running tests.
+    NOTE: Does not catch exceptions. Failure is desired.
+    NOTE: Can also end program should Ryu testing run into errors.
+"""
+def get_results():
+    global config
+    global profile
+
+    switch_model = profile['model']
+    of_version = profile['of_version']
+
+    create_dir(config['directory'])
+    switch_dir = '{}/{}'.format(config['directory'], switch_model)
+    create_dir(switch_dir)
+
+    switch_json = '{}/{}_{}.json'.format(switch_dir, switch_model, of_version)
+    switch_csv = '{}/{}_{}.csv'.format(switch_dir, switch_model, of_version)
+    if not os.path.exists(switch_json) or not os.path.exists(switch_csv):
+        if not os.path.exists(switch_json):
+            verbose_msg('Main: Testing {} with Ryu for {}.'\
+                        .format(switch_model, of_version))
+            # TODO: add some customizability options from config file
+            # run tests and convert to json
+            ryu_switch_test_dir = 'ryu/ryu/tests/switch'
+            ryu_command = 'ryu-manager --test-switch-dir {0}/{1} {0}/tester.py'\
+                            .format(ryu_switch_test_dir, of_version)
+            ryu_test = subprocess.Popen(ryu_command.split(),\
+                                        shell=True,\
+                                        stdout=subprocess.PIPE,\
+                                        stderr=subprocess.PIPE)
+            results, error = ryu_test.communicate()
+            verbose_msg('Main: Testing complete.')
+
+            if len(error) > 0:
+                fatal_error('Ryu testing encountered error(s) when running:\
+                             \n{}'.format(error))
+
+            results = results.split('\n')
+            ryu_to_json(results, switch_json)
+    
+        json_to_csv(switch_json, switch_csv)
+    judge_results(switch_csv)
+
+"""
+    With the results, convert them to the detailed
+    JSON format for engineers to look at and use.
+"""
+def ryu_to_json(ryu_results, json_path):
+    verbose_msg('Main: Saving detailed results to {}.'.format(json_path))
+
+    results = {}
+    errors = []
+    cur_test = None
+    cur_test_results = {}
+    i = -1
+    while True:
+        i += 1
+        line = ryu_results[i]
+        line = line.strip()
+    
+        # end of test
+        if 'Test end' in line:
+            break
+        # action being tested
+        line_starts = ['action: set_field:', 'action:', 'group:',
+                       'match:', 'meter:']
+        line_shorts = ['asf', 'act', 'grp', 'mat', 'mtr']
+        if any([line.startswith(start) for start in line_starts]):
+            if cur_test:
+                results[cur_test] = cur_test_results
+            for j, start in enumerate(line_starts):
+                if line.startswith(start):
+                    cur_test = line.replace(start, line_shorts[j])
+                    break
+            cur_test_results = {}
+
+        # a test result usually in the form of:
+        # /loc/of(config=value)/test-->'response from switch' OK/ERROR
+        elif '-->' in line:
+            # get test location, save result and details
+            test = line[:line.index('-->')].strip()
+            if line[-2:] == 'OK':
+                details = line[line.index('-->')+3:-2].strip("' ")
+                cur_test_results[test] = { 'result':'OK', 'detail':details }
+            elif line[-5:] == 'ERROR':
+                details = line[line.index('-->')+3:-5].strip("' ")
+                details = f.readline().strip("' ") + '. ' + details
+                cur_test_results[test] = { 'result':'ERROR', 'detail':details }
+
+    # when exiting loop, last tested action is not in action results
+    if cur_test:
+        results[cur_test] = cur_test_results
+
+    with open(json_path, 'w') as json_file:
+        json.dump(results, json_file, sort_keys=True)
+
+    verbose_msg('Main: {} written successfully.'.format(json_path))
+
+"""
+    With JSON results, simplify results further to a
+    simple CSV file with simple results for easy exporting.
+"""
+def json_to_csv(json_path, csv_path):
+    verbose_msg('Main: Converting detailed {} to simplified CSV file {}.'\
+                .format(json_path, csv_path))
+    with open(json_path, 'r') as json_file:
+        switch_json = json.load(json_file)
+        with open(csv_path, 'wb') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_MINIMAL)
+            for test_general in sorted(switch_json):
+                result = None
+                for test_specific in switch_json[test_general]:
+                    test_result = switch_json[test_general][test_specific]['result']
+                    if not result:
+                        result = test_result
+                    elif result != test_result:
+                        result = 'DIFF'
+                csv_writer.writerow([test_general, result])
+    verbose_msg('Main: {} written successfully'.format(csv_path))
+
+
+"""
+    With results and profile, provide PASS or FAIL based on
+    results of tests specified in profile. (goes to STDOUT)
+"""
+def judge_results(csv_path):
+    global profile
+
+    failures = []
+    with open(csv_path, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        for name, result in csv_reader:
+            if name in profile['compatibility'] and result != 'OK':
+                failures.append( (name, result) )
+    if len(failures) > 0:
+        print '{} FAILED'.format(profile['model'])
+        for name, result in failures:
+            verbose_msg('{}: {}'.format(name, result))
+    else:
+        print '{} PASSED'.format(profile['model'])
+
+if __name__ == '__main__':
+    """
+    USED TO TEST WITHOUT RUNNING FULL RYU TEST AGAIN
+    with open('ryu_switch_test.result', 'r') as f:
+        results = f.read().split('\n')
+        ryu_to_json(results, 'test.json')
+        json_to_csv('test.json', 'test.csv')
+    """
+
+    config_path = '{}/.ryu_testing.conf'.format(os.environ['HOME'])
+    profile_path = None
+
+    # go through args
+    # TODO: port definitions? or is that in config?
+    args = iter(sys.argv)
+    for arg in args:
+        if arg == '-c':
+            config_path = next(args)
+        if arg == '-p': # TODO expand and/or replace with reall stuff
+            profile_path = next(args) 
+        if arg == '-v':
+            verbose = True
+
+    # TODO expand and/or replace to make sure everything needed it here
+    if not profile_path:
+        fatal_error('Missing arguments: {}'.format('Profile location'))
+
+    load_config(config_path)
+    load_profile(profile_path)
+    get_results()
