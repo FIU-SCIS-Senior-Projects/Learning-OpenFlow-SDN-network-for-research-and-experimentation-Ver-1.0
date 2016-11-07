@@ -51,7 +51,7 @@ import subprocess
 def fatal_error(msg):
     print 'ERROR: {}'.format(msg)
     # TODO consider changing from exit to raising a custom exception (RyuCompError?)
-    exit(1)
+    sys.exit(1)
 
 verbose = False
 
