@@ -43,30 +43,40 @@ import subprocess
         https://osrg.github.io/ryu-book/en/html/switch_test_tool.html
 """
 
+"""
+    fatal_error:
+    Outputs error then terminates program.
+    msg: Message to output
+"""
 def fatal_error(msg):
     print 'ERROR: {}'.format(msg)
+    # TODO consider changing from exit to raising a custom exception (RyuCompError?)
     exit(1)
 
 verbose = False
 
+"""
+    verbose_msg:
+    Outputs message when verbose option is on.
+    msg: Message to output
+"""
 def verbose_msg(msg):
     global verbose
     if verbose:
         print msg
 
-# IDEA: results in database instead
-# have a working directory (can make better later)
-config = {
-    'directory': '{}/ryu_results'.format(os.environ['HOME']),
-  }
-
 """
     load_config:
     Load a config file (JSON formatted).
     config_path: 'path/to/config'
+    return: config dictionary object
 """
 def load_config(config_path):
-    global config
+    # default config dictionary object
+    config = {
+        'directory': '{}/ryu_results'.format(os.environ['HOME']),
+    }
+
     # if doesn't exist, create the default config file
     if not os.path.exists(config_path):
         verbose_msg('Config: Config file {} not found. Generating default config at location.'.format(config_path))
@@ -81,16 +91,15 @@ def load_config(config_path):
     # TODO update as less/more keys are used for config
 
     verbose_msg('Config: {} loaded successfully.'.format(config_path))
-
-profile = None
+    return config
 
 """
    load_profile:
    Load a profile file (JSON formatted).
    profile_path: 'path/to/profile'
+   return: profile dictionary object
 """
 def load_profile(profile_path):
-    global profile
     if not os.path.exists(profile_path):
         fatal_error('Profile file {} not found.'.format(profile_path))
 
@@ -111,6 +120,7 @@ def load_profile(profile_path):
         fatal_error(msg)
 
     verbose_msg('Profile: {} loaded successfully'.format(profile_path))
+    return profile
         
 
 """
@@ -127,19 +137,18 @@ def create_dir(dir_to_create):
         fatal_error('{} already exists, but is not a directory.'\
                 .format(dir_to_create))
 
-backup = False
-force_test = False
-
 """
-    Check if results already exist for the model,
-    if not, get results by running tests.
+    get_results:
+    Check if test results already exist for the model,
+      and if not, get results by running tests.
+    config: Configuration dictionary object
+    profile: Profile dictionary object
+    backup: Backup old result files (optional)
+    force_test: Run Ryu tests regardless of existing results (optional)
     NOTE: Does not catch exceptions. Failure is desired.
     NOTE: Can also end program should Ryu testing run into errors.
 """
-def get_results():
-    global config
-    global profile
-
+def get_results(config, profile, backup=False, force_test=False):
     switch_model = profile['model']
     of_version = profile['of_version']
 
@@ -184,11 +193,13 @@ def get_results():
             ryu_to_json(results, switch_json)
     
         json_to_csv(switch_json, switch_csv)
-    judge_results(switch_csv)
 
 """
-    With the results, convert them to the detailed
-    JSON format for engineers to look at and use.
+    ryu_to_json:
+    With the results, converts them to the detailed
+      JSON format for engineers to look at and use.
+    ryu_results: Array of lines representing the output of Ryu test
+    json_path: path/to/json/file
 """
 def ryu_to_json(ryu_results, json_path):
     verbose_msg('Main: Saving detailed results to {}.'.format(json_path))
@@ -203,9 +214,9 @@ def ryu_to_json(ryu_results, json_path):
         line = ryu_results[i]
         line = line.strip()
     
-        # end of test
         if 'Test end' in line:
             break
+
         """
             TEST FORMAT
             type: 00_TESTNAME (optional)
@@ -247,8 +258,11 @@ def ryu_to_json(ryu_results, json_path):
     verbose_msg('Main: {} written successfully.'.format(json_path))
 
 """
+    json_to_csv:
     With JSON results, simplify results further to a
-    simple CSV file with simple results for easy exporting.
+      simple CSV file with simple results for easy exporting.
+    json_path: path/to/json/file
+    csv_path: path/to/csv/file
 """
 def json_to_csv(json_path, csv_path):
     verbose_msg('Main: Converting detailed {} to simplified CSV file {}.'\
@@ -270,12 +284,22 @@ def json_to_csv(json_path, csv_path):
 
 
 """
-    With results and profile, provide PASS or FAIL based on
-    results of tests specified in profile. (goes to STDOUT)
+    judge_results:
+    Judges results and outputs PASS or FAIL based on
+      results of tests specified in profile. (goes to STDOUT)
+    config: Configuration dictionary object
+    prfile: Profile dictionary object
 """
-def judge_results(csv_path):
-    global profile
+def judge_results(config, profile):
+    switch_model = profile['model']
+    of_version = profile['of_version']
+    switch_dir = '{}/{}'.format(config['directory'], switch_model)
+    csv_path = '{}/{}_{}.csv'.format(switch_dir, switch_model, of_version)
 
+    if not os.path.exists(csv_path):
+        fatal_error('Cannot find CSV result file {}.'.format(csv_path))
+
+    verbose_msg('Main: Beginning judging.')
     failures = []
     with open(csv_path, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
@@ -301,6 +325,9 @@ if __name__ == '__main__':
     config_path = '{}/.ryu_testing.conf'.format(os.environ['HOME'])
     profile_path = None
 
+    backup = False
+    force_test = False
+
     # go through args
     # TODO: port definitions? or is that in config?
     args = iter(sys.argv)
@@ -322,6 +349,7 @@ if __name__ == '__main__':
     if not profile_path:
         fatal_error('Missing arguments: {}'.format('Profile location'))
 
-    load_config(config_path)
-    load_profile(profile_path)
-    get_results()
+    config = load_config(config_path)
+    profile = load_profile(profile_path)
+    get_results(config, profile, backup=backup, force_test=force_test)
+    judge_results(config, profile)
