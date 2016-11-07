@@ -9,8 +9,10 @@ import subprocess
     CLI command:
     python ryu_compatibility_test.py -p path/to/profile
     CLI arguments:
+      -b backup old results
       -c path/to/config
       -p path/to/profile
+      -t force testing
       -v verbose messages on
 
     Configuration file at predetermined point or given as argument is:
@@ -120,6 +122,9 @@ def create_dir(dir_to_create):
         fatal_error('{} already exists, but is not a directory.'\
                 .format(dir_to_create))
 
+backup = False
+force_test = False
+
 """
     Check if results already exist for the model,
     if not, get results by running tests.
@@ -139,8 +144,14 @@ def get_results():
 
     switch_json = '{}/{}_{}.json'.format(switch_dir, switch_model, of_version)
     switch_csv = '{}/{}_{}.csv'.format(switch_dir, switch_model, of_version)
-    if not os.path.exists(switch_json) or not os.path.exists(switch_csv):
-        if not os.path.exists(switch_json):
+    if backup:
+        if os.path.exists(switch_json):
+            os.rename(switch_json, '{}.bak'.format(switch_json))
+        if os.path.exists(switch_csv):
+            os.rename(switch_csv, '{}.bak'.format(switch_csv))
+
+    if force_test or not os.path.exists(switch_json) or not os.path.exists(switch_csv):
+        if force_test or not os.path.exists(switch_json):
             verbose_msg('Main: Testing {} with Ryu for {}.'\
                         .format(switch_model, of_version))
             # TODO: add some customizability options from config file
@@ -153,6 +164,9 @@ def get_results():
                                         stdout=subprocess.PIPE,\
                                         stderr=subprocess.PIPE)
             results, error = ryu_test.communicate()
+            
+            # TODO: actually write output to file
+
             verbose_msg('Main: Testing complete.')
 
             if len(error) > 0:
@@ -185,16 +199,21 @@ def ryu_to_json(ryu_results, json_path):
         # end of test
         if 'Test end' in line:
             break
-        # action being tested
-        line_starts = ['action: set_field:', 'action:', 'group:',
+        """
+        TEST FORMAT
+        type: 00_TESTNAME (optional)
+        """
+        type_tests = ['action: set_field:', 'action:', 'group:',
                        'match:', 'meter:']
-        line_shorts = ['asf', 'act', 'grp', 'mat', 'mtr']
-        if any([line.startswith(start) for start in line_starts]):
+        type_shorts = ['asf', 'act', 'grp', 'mat', 'mtr']
+        if any([line.startswith(start) for start in type_tests]):
             if cur_test:
                 results[cur_test] = cur_test_results
-            for j, start in enumerate(line_starts):
+            for j, start in enumerate(type_tests):
                 if line.startswith(start):
-                    cur_test = line.replace(start, line_shorts[j])
+                    after_type = line[len(start):]
+                    test_name = after_type[after_type.index('_')+1:]
+                    cur_test = '{} {}'.format(line_shorts[j], test_name)
                     break
             cur_test_results = {}
 
@@ -279,10 +298,14 @@ if __name__ == '__main__':
     # TODO: port definitions? or is that in config?
     args = iter(sys.argv)
     for arg in args:
+        if arg == '-b':
+            backup = True
         if arg == '-c':
             config_path = next(args)
         if arg == '-p': # TODO expand and/or replace with reall stuff
             profile_path = next(args) 
+        if arg == '-t':
+            force_test = True
         if arg == '-v':
             verbose = True
 
