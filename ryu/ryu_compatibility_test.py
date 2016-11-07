@@ -61,7 +61,9 @@ config = {
   }
 
 """
-    TODO: Use external config file for any configurations for ryu testing, maybe profile as well
+    load_config:
+    Load a config file (JSON formatted).
+    config_path: 'path/to/config'
 """
 def load_config(config_path):
     global config
@@ -83,7 +85,9 @@ def load_config(config_path):
 profile = None
 
 """
-   
+   load_profile:
+   Load a profile file (JSON formatted).
+   profile_path: 'path/to/profile'
 """
 def load_profile(profile_path):
     global profile
@@ -113,6 +117,7 @@ def load_profile(profile_path):
     create_dir:
     Function to create a directory if it doesn't exist.
     Throws OSError or crashes on failure.
+    dir_to_create: 'path/to/directory'
 """
 def create_dir(dir_to_create):
     if not os.path.exists(dir_to_create):
@@ -147,8 +152,10 @@ def get_results():
     if backup:
         if os.path.exists(switch_json):
             os.rename(switch_json, '{}.bak'.format(switch_json))
+            verbose_msg('Misc: Backed up {0} as {0}.bak.'.format(switch_json))
         if os.path.exists(switch_csv):
             os.rename(switch_csv, '{}.bak'.format(switch_csv))
+            verbose_msg('Misc: Backed up {0} as {0}.bak.'.format(switch_csv))
 
     if force_test or not os.path.exists(switch_json) or not os.path.exists(switch_csv):
         if force_test or not os.path.exists(switch_json):
@@ -200,8 +207,8 @@ def ryu_to_json(ryu_results, json_path):
         if 'Test end' in line:
             break
         """
-        TEST FORMAT
-        type: 00_TESTNAME (optional)
+            TEST FORMAT
+            type: 00_TESTNAME (optional)
         """
         type_tests = ['action: set_field:', 'action:', 'group:',
                        'match:', 'meter:']
@@ -300,14 +307,16 @@ if __name__ == '__main__':
     for arg in args:
         if arg == '-b':
             backup = True
-        if arg == '-c':
+        elif arg == '-c':
             config_path = next(args)
-        if arg == '-p': # TODO expand and/or replace with reall stuff
+        elif arg == '-p':
             profile_path = next(args) 
-        if arg == '-t':
+        elif arg == '-t':
             force_test = True
-        if arg == '-v':
+        elif arg == '-v':
             verbose = True
+        else:
+            fatal_error('Unknown argument encountered: {}'.format(arg))
 
     # TODO expand and/or replace to make sure everything needed it here
     if not profile_path:
