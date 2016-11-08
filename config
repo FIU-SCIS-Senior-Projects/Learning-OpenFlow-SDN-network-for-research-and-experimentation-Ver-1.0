@@ -1,0 +1,49 @@
+# This is the configuration file for OFTest Runner. 
+# Make all necessary changes to configure the program
+# in this file.
+#
+[GENERAL]
+#
+# Timestamp format.
+TIMESTAMP_FORMAT=_%Y-%m-%dT%H:%M:%S
+#
+# OpenFlow port numbers and the dataplane interfaces to be used.
+INTERFACES=1@veth1,2@veth3
+#
+[OFTEST]
+#
+# Executable paths.
+EXEC_PATH=/home/mininet/oftest/oft
+#
+# Root XML directory path.
+XML_ROOT_DIRPATH=/home/mininet/oftest/oftrunner/oftest/xml_output/
+#
+# XML directory path.
+XML_DIRNAME=xml_output
+#
+# STDOUT and STDERR directory paths.
+STDOUT_DIRPATH=/home/mininet/oftest/oftrunner/oftest/stdout/
+STDERR_DIRPATH=/home/mininet/oftest/oftrunner/oftest/stderr/
+#
+# STDOUT and STDERR filenames.
+STDOUT_FILENAME=oft_stdout
+STDERR_FILENAME=oft_stderr
+#
+[SWITCH]
+#
+# Executable path.
+EXEC_PATH=/home/mininet/oftest/run_switch.py
+#
+# STDOUT and STDERR directory paths.
+STDOUT_DIRPATH=/home/mininet/oftest/oftrunner/run_switch/stdout/
+STDERR_DIRPATH=/home/mininet/oftest/oftrunner/run_switch/stderr/
+#
+# STDOUT and STDERR filenames.
+STDOUT_FILENAME=rs_stdout
+STDERR_FILENAME=rs_stderr
+#
+[REPORT]
+#
+# JSON report filename, file extension and directory path.
+DIRPATH=/home/mininet/oftest/oftrunner/reports/
+FILENAME=oftrunner_report
