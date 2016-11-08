@@ -170,6 +170,14 @@ def get_results(config, profile, backup=False, force_test=False):
         if force_test or not os.path.exists(switch_json):
             verbose_msg('Main: Testing {} with Ryu for {}.'\
                         .format(switch_model, of_version))
+
+            """
+                FOR TESTING WITHOUT RUNNING FULL RYU TESTS
+            with open('{}/ryu_switch_test.result'.format(os.environ['HOME']), 'r') as f:
+                results = f.read()
+            error = []
+
+            """
             # TODO: add some customizability options from config file
             # run tests and convert to json
             ryu_switch_test_dir = 'ryu/ryu/tests/switch'
@@ -231,7 +239,7 @@ def ryu_to_json(ryu_results, json_path):
                 if line.startswith(start):
                     after_type = line[len(start):]
                     test_name = after_type[after_type.index('_')+1:]
-                    cur_test = '{} {}'.format(line_shorts[j], test_name)
+                    cur_test = '{} {}'.format(type_shorts[j], test_name)
                     break
             cur_test_results = {}
 
@@ -245,7 +253,8 @@ def ryu_to_json(ryu_results, json_path):
                 cur_test_results[test] = { 'result':'OK', 'detail':details }
             elif line[-5:] == 'ERROR':
                 details = line[line.index('-->')+3:-5].strip("' ")
-                details = f.readline().strip("' ") + '. ' + details
+                i += 1
+                details = ryu_results[i].strip("' ") + '. ' + details
                 cur_test_results[test] = { 'result':'ERROR', 'detail':details }
 
     # when exiting loop, last tested action is not in action results
@@ -253,7 +262,7 @@ def ryu_to_json(ryu_results, json_path):
         results[cur_test] = cur_test_results
 
     with open(json_path, 'w') as json_file:
-        json.dump(results, json_file, sort_keys=True)
+        json.dump(results, json_file, sort_keys=True, ensure_ascii=True)
 
     verbose_msg('Main: {} written successfully.'.format(json_path))
 
@@ -301,26 +310,24 @@ def judge_results(config, profile):
 
     verbose_msg('Main: Beginning judging.')
     failures = []
+    comp_list = profile['compatibility'][:]
     with open(csv_path, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
         for name, result in csv_reader:
-            if name in profile['compatibility'] and result != 'OK':
-                failures.append( (name, result) )
-    if len(failures) > 0:
+            if name in comp_list:
+                if result != 'OK':
+                    failures.append( (name, result) )
+                comp_list.remove(name)
+    if len(failures) > 0 or len(comp_list) > 0:
         print '{} FAILED'.format(profile['model'])
         for name, result in failures:
-            verbose_msg('{}: {}'.format(name, result))
+            verbose_msg('FAILED TESTS: {},{}'.format(name, result))
+        for name in comp_list:
+            verbose_msg('NOT FOUND: {}'.format(name))
     else:
         print '{} PASSED'.format(profile['model'])
 
 if __name__ == '__main__':
-    """
-    USED TO TEST WITHOUT RUNNING FULL RYU TEST AGAIN
-    with open('ryu_switch_test.result', 'r') as f:
-        results = f.read().split('\n')
-        ryu_to_json(results, 'test.json')
-        json_to_csv('test.json', 'test.csv')
-    """
 
     config_path = '{}/.ryu_testing.conf'.format(os.environ['HOME'])
     profile_path = None
@@ -330,7 +337,7 @@ if __name__ == '__main__':
 
     # go through args
     # TODO: port definitions? or is that in config?
-    args = iter(sys.argv)
+    args = iter(sys.argv[1:])
     for arg in args:
         if arg == '-b':
             backup = True
