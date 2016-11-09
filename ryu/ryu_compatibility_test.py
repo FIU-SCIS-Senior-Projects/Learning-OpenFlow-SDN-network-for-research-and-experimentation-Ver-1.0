@@ -15,6 +15,10 @@ import subprocess
       -t force testing
       -v verbose messages on
 
+      Specific to Ryu testing
+      -tester tester switch datapath ID
+      -target target switch datapath ID 
+
     Configuration file at predetermined point or given as argument is:
       - default location - home directory as .ryu_testing.conf
       - JSON file containing:
@@ -148,7 +152,8 @@ def create_dir(dir_to_create):
     NOTE: Does not catch exceptions. Failure is desired.
     NOTE: Can also end program should Ryu testing run into errors.
 """
-def get_results(config, profile, backup=False, force_test=False):
+def get_results(config, profile, backup=False, force_test=False,
+                tester_dpid=1, target_dpid=2):
     switch_model = profile['model']
     of_version = profile['of_version']
 
@@ -181,8 +186,8 @@ def get_results(config, profile, backup=False, force_test=False):
             # TODO: add some customizability options from config file
             # run tests and convert to json
             ryu_switch_test_dir = 'ryu/ryu/tests/switch'
-            ryu_command = 'ryu-manager --test-switch-dir {0}/{1} {0}/tester.py'\
-                            .format(ryu_switch_test_dir, of_version)
+            ryu_command = 'ryu-manager --test-switch-dir {0}/{1} --test-switch-tester {2} --test-switch-target {3} {0}/tester.py'\
+                            .format(ryu_switch_test_dir, of_version, tester_dpid, target_dpid)
             ryu_test = subprocess.Popen(ryu_command.split(),\
                                         shell=True,\
                                         stdout=subprocess.PIPE,\
@@ -349,6 +354,10 @@ if __name__ == '__main__':
             force_test = True
         elif arg == '-v':
             verbose = True
+        elif arg == '-tester':
+            tester_dp = next(args)
+        elif arg == '-target':
+            target_dp = next(args)
         else:
             fatal_error('Unknown argument encountered: {}'.format(arg))
 
@@ -358,5 +367,6 @@ if __name__ == '__main__':
 
     config = load_config(config_path)
     profile = load_profile(profile_path)
-    get_results(config, profile, backup=backup, force_test=force_test)
+    get_results(config, profile, backup=backup, force_test=force_test,
+                tester_dpid=tester_dp, target_dpid=target_dp)
     judge_results(config, profile)
