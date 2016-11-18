@@ -1,14 +1,16 @@
+# for 2.7 print compatibility
+from __future__ import print_function
 import sys
 import os
 import json
 
 """
     fatal_error:
-    Outputs error then terminates program.
+    Outputs error to STDERR then terminates program.
     msg: Message to output
 """
 def fatal_error(msg):
-    print 'ERROR: {}'.format(msg)
+    print('ERROR: {}'.format(msg), file=sys.stderr)
     # TODO consider changing from exit to raising a custom exception (RyuCompError?)
     sys.exit(1)
 
@@ -20,7 +22,7 @@ def fatal_error(msg):
 """
 def verbose_msg(msg, verbose):
     if verbose:
-        print msg
+        print(msg)
 
 """
     load_config:
@@ -32,7 +34,7 @@ def verbose_msg(msg, verbose):
 def load_config(config_path, verbose=False):
     # default config dictionary object
     config = {
-        'directory': '{}/ryu_results'.format(os.environ['HOME']),
+        'directory': '{}/switch_tester'.format(os.environ['HOME']),
     }
 
     # if doesn't exist, create the default config file
@@ -62,7 +64,7 @@ def check_config(config):
     missing = []
 
     for check in check_list:
-        if not check in config:
+        if check not in config:
             missing.append(check)
 
     if len(missing) > 0:
@@ -71,6 +73,55 @@ def check_config(config):
             msg += '\nMissing {}'.format(miss)
         fatal_error(msg)
     
+"""
+    load_target:
+    Load a target switch configuration (JSON formatted).
+    config: config dictionary object
+    switch_path: 'path/to/switch'
+    return: target switch dictionary object
+"""
+def load_target(config, switch_path):
+    # TODO actually do
+    return {'model':'test', 'description':'testing', 'of_version':'1.3', \
+            'ryu':{'tester-dpid':'1', 'target-dpid':'2'}}
+
+"""
+    check_switch:
+    Check if a switch configuration is valid.
+    switch: Switch configuration to check
+"""
+def check_switch(switch):
+    # Check if any keys missing, if so, throw error
+    # First round. no specifics to Ryu or OFTest
+    check_list = ['model', 'description', 'of_version']
+    missing = []
+
+    for check in check_list:
+        if check not in switch:
+            missing.append(check)
+
+    if len(missing) > 0:
+        msg = 'Switch: Missing necessary generic keys.'
+        for miss in missing:
+            msg += '\nMissing {}'.format(miss)
+        fatal_error(msg)
+
+    if switch['of_version'] == '1.3':
+        if 'ryu' not in switch:
+            fatal_error('Switch: Missing key ryu')
+        else:
+            switch = switch['ryu']
+            check_list = ['tester-dpid', 'target-dpid']
+
+    for check in check_list:
+        if check not in switch:
+            missing.append(check)
+
+    if len(missing) > 0:
+        msg = 'Switch: Missing necessary keys.'
+        for miss in missing:
+            msg += '\nMissing {}'.format(miss)
+        fatal_error(msg)
 
 """
     load_profile:
@@ -79,7 +130,9 @@ def check_config(config):
     verbose: If True, output verbose messages.
     return: profile dictionary object
 """
-def load_profile(profile_path, verbose=False):
+def load_profile(config, profile_path):
+    verbose = config['verbose']
+
     if not os.path.exists(profile_path):
         fatal_error('Profile file {} not found.'.format(profile_path))
 
@@ -99,7 +152,7 @@ def load_profile(profile_path, verbose=False):
 """
 def check_profile(profile):
     # Check if any keys missing, if so, throw error
-    check_list = ['name', 'of_version', 'compatibility']
+    check_list = ['name', 'compatibility']
     missing = []
         
     for check in check_list:
