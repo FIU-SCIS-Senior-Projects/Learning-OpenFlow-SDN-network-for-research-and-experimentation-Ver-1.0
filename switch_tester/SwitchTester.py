@@ -88,7 +88,6 @@ if __name__ == '__main__':
                 we can ask user for information instead.
             """
             target = {}
-            # ask for each necessary piece of info about target switch
             print('Please input target switch information:')
             print('> Model:', end='  ')
             target['model'] = input()
@@ -96,7 +95,8 @@ if __name__ == '__main__':
             target['description'] = input()
             print('> OpenFlow version:', end='  ')
             target['of-version'] = input()
-            # if of_version == '1.3': ask for tester-dpid and target-dpid
+
+            # if of-version == 1.0: OFTester
             if target['of-version'] == '1.3':
                 target['ryu'] = {}
                 print('> Ryu Tester Switch DPID:', end='  ')
