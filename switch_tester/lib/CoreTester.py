@@ -95,6 +95,11 @@ def check_config(config):
             Configuration of program.
     """
 
+    """ A valid config consists of these key(s):
+        directory : str
+            Working directory for the program.
+    """
+
     """ Check that all necessary keys are in config.
         If not, report the missing keys as an error.
     """
@@ -143,6 +148,24 @@ def check_switch(switch):
             Switch configuration.
     """
 
+    """ A valid switch consists of these key(s):
+        model : str
+            Name of switch model
+        description : str
+            Further description of the switch
+        of-version : str
+            OpenFlow version targetted for the switch.
+        ryu : dict
+            Contains keys for:
+                tester-dpid : str
+                    Datapath ID of Ryu's tester switch.
+                target-dpid : str
+                    Datapath ID of Ryu's target switch.
+        oftest : dict
+            Contains keys for:
+            TODO
+    """
+
     """ Check that all necessary non-tester specific keys are in switch.
         If not, report the missing keys as an error.
     """
@@ -172,13 +195,6 @@ def check_switch(switch):
                   + missing
         fatal_error('\n'.join(missing))
 
-"""
-    load_profile:
-    Load a profile file (JSON formatted).
-    profile_path: 'path/to/profile'
-    verbose: If True, output verbose messages.
-    return: profile dictionary object
-"""
 def load_profile(config, profile_path):
     """ Load an application profile (JSON formatted).
 
@@ -213,7 +229,14 @@ def check_profile(profile):
         profile : dict
             Application profile information.
     """
-    # Check if any keys missing, if so, throw error
+
+    """ A valid profile consists of these key(s):
+        name : str
+            Name of application
+        compatibility : [str]
+            List of tests to confirm compatibility with.
+    """
+    """ Check if any keys missing, if so, report error """
     check_list = ['name', 'compatibility']
     missing = check_keys(profile, check_list)
         

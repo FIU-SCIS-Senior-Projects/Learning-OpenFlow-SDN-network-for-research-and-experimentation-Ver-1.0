@@ -97,6 +97,9 @@ def get_results(config, target):
         if verbose:
             results = []
             for line in iter(ryu_test.stderr.readline, ''):
+                line = line.decode().rstrip()
+                if line == '':
+                    break
                 Core.verbose_msg(line, verbose)
                 results.append(line)
             results = '\n'.join(results)
@@ -104,7 +107,7 @@ def get_results(config, target):
              results = ryu_test.communicate()[1] 
 
         """ Save Ryu raw test results """
-        with open(switch_ryu, 'wb') as ryu_file:
+        with open(switch_ryu, 'w') as ryu_file:
             ryu_file.write(results)
 
         Core.verbose_msg('Main: Testing complete.', verbose)
@@ -137,7 +140,7 @@ def _ryu_to_json(config, ryu_path, json_path):
         ryu_path : str
             path/to/ryu/results
         json_path : str
-            path/to/json/results
+            where/to/save/json/results
     """
     verbose = config['verbose']
 
@@ -168,7 +171,7 @@ def _ryu_to_json(config, ryu_path, json_path):
             test_types = ['action: set_field:', 'action:', 'group',
                           'match:', 'meter:']
             test_abbrv = ['asf', 'act', 'grp', 'mat', 'mtr']
-            while not any(test in line for test in test_types):
+            while not any(line.startswith(test) for test in test_types):
                 line = next(ryu_results).strip()
 
             for test, abbv in zip(test_types, test_abbrv):
@@ -189,7 +192,7 @@ def _ryu_to_json(config, ryu_path, json_path):
                 patterns.
             """
             line = next(ryu_results).strip()
-            while not any(test in line for test in test_types):
+            while not any(line.startswith(test) for test in test_types):
                 """ Test results finished. We're done. """
                 if 'Test end' in line:
                     break
@@ -217,101 +220,73 @@ def _ryu_to_json(config, ryu_path, json_path):
     except StopIteration:
         pass
 
-        
-
-    """
-    cur_test = None
-    cur_test_results = {}
-    i = 0
-    while i < len(ryu_results):
-        line = ryu_results[i]
-        line = line.strip()
-    
-        if 'Test end' in line:
-            break
-
-        ""
-            TEST FORMAT
-            type: 00_TESTNAME (optional)
-        ""
-        type_tests = ['action: set_field:', 'action:', 'group:',
-                       'match:', 'meter:']
-        type_shorts = ['asf', 'act', 'grp', 'mat', 'mtr']
-        if any([line.startswith(start) for start in type_tests]):
-            if cur_test:
-                results[cur_test] = cur_test_results
-            for j, start in enumerate(type_tests):
-                if line.startswith(start):
-                    after_type = line[len(start):]
-                    test_name = after_type[after_type.index('_')+1:]
-                    cur_test = '{} {}'.format(type_shorts[j], test_name)
-                    break
-            cur_test_results = {}
-
-        # a test result usually in the form of:
-        # /loc/of(config=value)/test-->'response from switch' OK/ERROR
-        elif '-->' in line:
-            # get test location, save result and details
-            test = line[:line.index('-->')].strip()
-            if line[-2:] == 'OK':
-                details = line[line.index('-->')+3:-2].strip("' ")
-                cur_test_results[test] = { 'result':'OK', 'detail':details }
-            elif line[-5:] == 'ERROR':
-                details = line[line.index('-->')+3:-5].strip("' ")
-                i += 1
-                details = ryu_results[i].strip("' ") + '. ' + details
-                cur_test_results[test] = { 'result':'ERROR', 'detail':details }
-        i += 1
-
-    # when exiting loop, last tested action is not in action results
-    if cur_test:
-        results[cur_test] = cur_test_results
-    """
-
+    """ Save results to JSON file """
     with open(json_path, 'w') as json_file:
-        json.dump(results, json_file, sort_keys=True, ensure_ascii=True, indent=4)
+        json.dump(results, json_file, sort_keys=True, \
+                  ensure_ascii=True, indent=4)
 
-    Core.verbose_msg('Main: {} written successfully.'.format(json_path), verbose)
+    Core.verbose_msg('Main: {} written successfully.'.format(json_path), \
+                     verbose)
 
-"""
-    json_to_csv:
-    With JSON results, simplify results further to a
-      simple CSV file with simple results for easy exporting.
-    json_path: path/to/json/file
-    csv_path: path/to/csv/file
-    verbose: If True, output verbose messages.
-"""
 def _json_to_csv(config, json_path, csv_path):
+    """ Using JSON results, simplify results for a
+        CSV file containing just a test name and result.
+        Internal function to RyuTester.
+
+        config : dict
+            Configuration of program.
+            Since this is an internal function, config should
+            have been checked by the calling function in RyuTester.
+        json_path : str
+            path/to/json/results
+        csv_path : str
+            where/to/save/csv/results
+    """
     verbose = config['verbose']
 
     Core.verbose_msg('Main: Converting detailed {} to simplified CSV file {}.'\
                 .format(json_path, csv_path), verbose)
+
     with open(json_path, 'r') as json_file,\
          open(csv_path, 'w') as csv_file:
         switch_json = json.load(json_file)
         csv_writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
-        for test_general in sorted(switch_json):
-            # all specific tests need to have the same result to make a conclusion
-            result = None
-            for test_specific in switch_json[test_general]:
-                test_result = switch_json[test_general][test_specific]['result']
-                if not result:
-                    result = test_result
-                elif result != test_result:
-                    result = 'DIFF'
-            csv_writer.writerow( (test_general, result) )
+        for test in sorted(switch_json):
+            """ If all sub tests have the same outcome, use that,
+                otherwise, report the difference. (OK/ERROR/DIFF)
+            """
+            sub_tests = list(switch_json[test].values())
+            if all(sub_test['result'] == sub_tests[0]['result'] \
+                   for sub_test in sub_tests):
+                result = sub_tests[0]['result']
+            else:
+                result = 'DIFF'
+
+            csv_writer.writerow( (test, result) )
     Core.verbose_msg('Main: {} written successfully'.format(csv_path), verbose)
 
 
-"""
-    judge_results:
-    Judges results and outputs PASS or FAIL based on
-      results of tests specified in profile. (goes to STDOUT)
-    config: Configuration dictionary object
-    prfile: Profile dictionary object
-    verbose: If True, output verbose messages.
-"""
 def judge_results(config, target, profile):
+    """ Judges CSV results against application profile's list
+        of compatibility checks and outputs the judgement.
+        Judgement is PASS/FAIL in regards to target switch
+        and application profile.
+
+        config : dict
+            Configuration of program.
+        target : dict
+            Target switch configuration.
+        profile : dict
+            Application profile information.
+    """
+    """ Be cautious and check that config, target, and profile
+        are all valid and usable, since this can be called from
+        outside of RyuTester and usability isn't guaranteed.
+    """
+    Core.check_config(config)
+    Core.check_switch(target)
+    Core.check_profile(profile)
+
     verbose = config['verbose']
 
     switch_model = target['model']
@@ -322,6 +297,9 @@ def judge_results(config, target, profile):
         Core.fatal_error('Cannot find CSV result file {}.'.format(csv_path))
 
     Core.verbose_msg('Main: Beginning judging.', verbose)
+    """ Collect ERRORs/DIFFs as failures and keep track of
+        compatibility to also keep track of those not found.
+    """
     failures = []
     comp_list = profile['compatibility'][:]
     with open(csv_path, 'r') as csv_file:
@@ -331,11 +309,18 @@ def judge_results(config, target, profile):
                 if result != 'OK':
                     failures.append( (name, result) )
                 comp_list.remove(name)
-    # any compatibility failures or features without results are reported
+
+    """ Any failures or unconfirmed compatibility checks results
+        in a judgement of failure, with verbose reporting on the
+        failed or not found checks.
+        Otherwise, the judgement is the switch passed the application
+        profile compatibility test.
+    """
     if len(failures) > 0 or len(comp_list) > 0:
         print('{}: {} FAILED'.format(profile['name'], target['model']))
         for name, result in failures:
-            Core.verbose_msg('FAILED TESTS: {},{}'.format(name, result), verbose)
+            Core.verbose_msg('FAILED TESTS: {},{}'.format(name, result),\
+                             verbose)
         for name in comp_list:
             Core.verbose_msg('NOT FOUND: {}'.format(name), verbose)
     else:
