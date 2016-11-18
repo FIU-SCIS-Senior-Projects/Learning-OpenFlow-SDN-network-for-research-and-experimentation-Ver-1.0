@@ -90,21 +90,19 @@ def get_results(config, target):
                        .format(ryu_switch_test_dir, tester_dpid, target_dpid)
 
         ryu_test = subprocess.Popen(ryu_command.split(), \
+                                    shell=True, \
                                     stdout=subprocess.PIPE, \
                                     stderr=subprocess.PIPE)
  
-        """ If verbose, get output from Ryu as it's testing """
-        if verbose:
-            results = []
-            for line in iter(ryu_test.stderr.readline, ''):
-                line = line.decode().rstrip()
-                if line == '':
-                    break
-                Core.verbose_msg(line, verbose)
-                results.append(line)
-            results = '\n'.join(results)
-        else:
-             results = ryu_test.communicate()[1] 
+        """ Get output from Ryu as it's testing """
+        results = []
+        for line in iter(ryu_test.stderr.readline, ''):
+            line = line.decode().rstrip()
+            if line == '':
+                break
+            Core.verbose_msg(line, verbose)
+            results.append(line)
+        results = '\n'.join(results)
 
         """ Save Ryu raw test results """
         with open(switch_ryu, 'w') as ryu_file:
