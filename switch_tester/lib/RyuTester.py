@@ -90,7 +90,6 @@ def get_results(config, target):
                        .format(ryu_switch_test_dir, tester_dpid, target_dpid)
 
         ryu_test = subprocess.Popen(ryu_command.split(), \
-                                    shell=True, \
                                     stdout=subprocess.PIPE, \
                                     stderr=subprocess.PIPE)
  
