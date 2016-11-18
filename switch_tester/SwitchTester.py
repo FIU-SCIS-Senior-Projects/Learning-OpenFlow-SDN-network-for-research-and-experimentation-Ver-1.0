@@ -33,7 +33,7 @@ if sys.version_info < (3,0):
 
 if __name__ == '__main__':
     """ Set defaults """
-    config_path = '{}/.ryu_testing.conf'.format(os.environ['HOME'])
+    config_path = '{}/.switch_tester.conf'.format(os.environ['HOME'])
     target_path = None
     profile_path = None
 
