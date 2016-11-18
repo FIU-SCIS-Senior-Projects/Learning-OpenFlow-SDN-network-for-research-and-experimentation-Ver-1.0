@@ -1,4 +1,4 @@
-from lib import RyuTester
+from lib import RyuTester as RyuTester
 from lib import CoreTester as Core
 
 import os
@@ -28,7 +28,7 @@ import sys
 """
 
 if __name__ == '__main__':
-    # Defaults
+    """ Set defaults """
     config_path = '{}/.ryu_testing.conf'.format(os.environ['HOME'])
     target_path = None
     profile_path = None
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     interactive = False
     verbose = False
 
-    # go through args
+    """ Go through command line arguments """
     args = iter(sys.argv[1:])
     for arg in args:
         if arg == '-b':
@@ -58,43 +58,50 @@ if __name__ == '__main__':
         else:
             Core.fatal_error('Unknown argument encountered: {}'.format(arg))
 
-    # load configuration at config_path
+    """ Load configuration at config_path """
     config = Core.load_config(config_path, verbose)
 
-    # arguments that override a loaded config setup
-    if backup or 'backup' not in config:
+    """ Apply arguments that are missing or override a loaded config setup """
+    if 'backup' not in config or backup:
         config['backup'] = backup
-    if force_test or 'force-test' not in config:
+    if 'force-test' not in config or force_test:
         config['force-test'] = force_test
-    if verbose or 'verbose' not in config:
+    if 'verbose' not in config or verbose:
         config['verbose'] = verbose
 
-    if profile_path:
+    if profile_path is not None:
         profile = Core.load_profile(config, profile_path)
 
-    # need a target switch
-    if target_path:
-        # load target switch
+    """ SwitchTester needs a target switch for testing """
+    if target_path is not None:
+        """ Load target switch configuration at target_path """
         target = Core.load_target(config, target_path)
     else:
         if not interactive:
             Core.fatal_error('Missing arguments: {}'.format('Target switch location'))
         else:
+            """ If not target_path is provided, but interactive is on,
+                we can ask user for information instead.
+            """
             target = {}
             # ask for each necessary piece of info about target switch
             # model (non-empty string)
             # description
-            # of_version
+            # of-version
             # if of_version == '1.3': ask for tester-dpid and target-dpid
 
+    """ Select tester based on OpenFlow version supported by the switch """
     # if of_version == 1.0: OFTester
-    if target['of_version'] == '1.3':
+    if target['of-version'] == '1.3':
         tester = RyuTester
     else:
         fatal_error('Unknown OpenFlow version: {}'.format(target['of_version']))
 
+    """ Get result of tests in raw output (oft or ryu file),
+        a detailed JSON report, and a simple CSV report.
+    """
     tester.get_results(config, target)
 
-    # only judging results if application profile loaded
-    if profile_path:
+    """ Judge results against application profile, if provided """
+    if profile_path is not None:
         tester.judge_results(config, target, profile)

@@ -7,104 +7,219 @@ import os
 import subprocess
 
 """
+    PREREQUISITES:
+     - Ryu is installed (ryu-manager in particular)
+     - Ryu git repository is cloned at home directory.
+
     RESOURCES:
      - Python API Library
      - Ryu Test Tool Usage Examples:
         https://osrg.github.io/ryu-book/en/html/switch_test_tool.html
 """
 
-"""
-    get_results:
-    Check if test results already exist for the model,
-      and if not, get results by running tests.
-    config: Configuration dictionary object
-    target: Target switch configuration dictionary object
-    NOTE: Does not catch exceptions. Failure is desired.
-    NOTE: Can also end program should Ryu testing run into errors.
-"""
 def get_results(config, target):
+    """ Check if Ryu test results already exist for the target switch,
+        and if not, run tests to get results.
+
+        config : dict
+            Configuration of the program.
+        target : dict
+            Target switch configuration.
+    """
+
+    """ Be cautious and check that config and target are valid and usable """
     Core.check_config(config)
     Core.check_switch(target)
 
+    backup = config['backup']
+    force_test = config['force-test']
     verbose = config['verbose']
 
     switch_model = target['model']
-    of_version = target['of_version']
+    of_version = target['of-version']
 
     switch_dir = '{}/{}'.format(config['directory'], switch_model)
-    Core.create_dir(switch_dir)
+    Core.create_dir(config, switch_dir)
 
     switch_ryu = '{}/{}.ryu'.format(switch_dir, switch_model)
     switch_json = '{}/{}.json'.format(switch_dir, switch_model)
     switch_csv = '{}/{}.csv'.format(switch_dir, switch_model)
 
-    if config['backup']:
+    """ Backup all relevant report files """
+    if backup:
+        if os.path.exists(switch_ryu):
+            os.rename(switch_ryu, '{}.bak'.format(switch_ryu))
+            Core.verbose_msg('Misc: Backed up {0} as {0}.bak.' \
+                              .format(switch_ryu), \
+                             verbose)
         if os.path.exists(switch_json):
             os.rename(switch_json, '{}.bak'.format(switch_json))
-            Core.verbose_msg('Misc: Backed up {0} as {0}.bak.'.format(switch_json), verbose)
+            Core.verbose_msg('Misc: Backed up {0} as {0}.bak.' \
+                              .format(switch_json), \
+                             verbose)
         if os.path.exists(switch_csv):
             os.rename(switch_csv, '{}.bak'.format(switch_csv))
-            Core.verbose_msg('Misc: Backed up {0} as {0}.bak.'.format(switch_csv), verbose)
+            Core.verbose_msg('Misc: Backed up {0} as {0}.bak.' \
+                              .format(switch_csv), \
+                             verbose)
 
-    if config['force-test'] \
-            or not os.path.exists(switch_ryu) \
-            or not os.path.exists(switch_json) \
-            or not os.path.exists(switch_csv):
-        if config['force-test'] \
-                or not os.path.exists(switch_ryu) \
-                or not os.path.exists(switch_json):
-            if config['force-test'] \
-                    or not os.path.exists(switch_ryu):
-                Core.verbose_msg('Main: Testing {} with Ryu for {}.'\
-                            .format(switch_model, of_version), verbose)
-    
-                tester_dpid = target['ryu']['tester-dpid']
-                target_dpid = target['ryu']['target-dpid']
-                ryu_switch_test_dir = '{}/ryu/ryu/tests/switch'.format(os.environ['HOME'])
-                ryu_command = 'ryu-manager --test-switch-dir {0}/of13 --test-switch-tester {1} --test-switch-target {2} {0}/tester.py'\
-                              .format(ryu_switch_test_dir, tester_dpid, target_dpid)
-                Core.verbose_msg(ryu_command, verbose)
-                # shell=True to not have any output from the thing
-                with open(switch_ryu, 'wb') as ryu_file:
-                    ryu_test = subprocess.Popen(ryu_command.split(),\
-                                            stdout=subprocess.PIPE,\
-                                            stderr=subprocess.PIPE)
+    """ Check for existance of reports.
+        NOTE: Done after backup to have False when backup occurs.
+    """
+    ryu_exists = os.path.exists(switch_ryu)
+    json_exists = os.path.exists(switch_json)
+    csv_exists = os.path.exists(switch_csv)
 
-                    results = ryu_test.communicate()[1]
-                    ryu_file.write(results)
-                
-    
-                Core.verbose_msg('Main: Testing complete.', verbose)
-    
-                """
-                    TODO: ERROR CHECK INSUFFICIENT
-                if len(error) > 0:
-                    Core.fatal_error('Ryu testing encountered error(s) when running:\n{}'\
-                                      .format(error))
-                """
-            with open(switch_ryu, 'r') as ryu_file:
-                results = ryu_file.read()
-                    
-            results = results.split('\n')
-            ryu_to_json(config, results, switch_json)
-   
-        json_to_csv(config, switch_json, switch_csv)
+    if force_test or not ryu_exists:
+        """ Invalidate existing JSON and CSV reports (if any) since
+            running new tests.
+        """
+        json_exists = False
+        csv_exists = False
 
-"""
-    ryu_to_json:
-    With the results, converts them to the detailed
-      JSON format for engineers to look at and use.
-    ryu_results: Array of lines representing the output of Ryu test
-    json_path: path/to/json/file
-    verbose: If True, output verbose messages.
-"""
-def ryu_to_json(config, ryu_results, json_path):
+        Core.verbose_msg('Main: Testing {} with Ryu for {}.'\
+                          .format(switch_model, of_version), \
+                         verbose)
+
+        tester_dpid = target['ryu']['tester-dpid']
+        target_dpid = target['ryu']['target-dpid']
+        """ ASSUMPTION: Ryu git cloned at home directory """
+        ryu_switch_test_dir = '{}/ryu/ryu/tests/switch'.format(os.environ['HOME'])
+
+        ryu_command = 'ryu-manager --test-switch-dir {0}/of13 --test-switch-tester {1} --test-switch-target {2} {0}/tester.py'\
+                       .format(ryu_switch_test_dir, tester_dpid, target_dpid)
+
+        ryu_test = subprocess.Popen(ryu_command.split(), \
+                                    stdout=subprocess.PIPE, \
+                                    stderr=subprocess.PIPE)
+ 
+        """ If verbose, get output from Ryu as it's testing """
+        if verbose:
+            results = []
+            for line in iter(ryu_test.stderr.readline, ''):
+                Core.verbose_msg(line, verbose)
+                results.append(line)
+            results = '\n'.join(results)
+        else:
+             results = ryu_test.communicate()[1] 
+
+        """ Save Ryu raw test results """
+        with open(switch_ryu, 'wb') as ryu_file:
+            ryu_file.write(results)
+
+        Core.verbose_msg('Main: Testing complete.', verbose)
+
+        """
+            TODO: ERROR CHECK INSUFFICIENT
+        if len(error) > 0:
+            Core.fatal_error('Ryu testing encountered error(s) when running:\n{}'\
+                              .format(error))
+        """
+
+    if not json_exists:
+        """ Invalidate existing CSV report (if any) """
+        csv_exists = False
+
+        _ryu_to_json(config, switch_ryu, switch_json)
+
+    if not csv_exists:
+        _json_to_csv(config, switch_json, switch_csv)
+
+def _ryu_to_json(config, ryu_path, json_path):
+    """ Convert raw Ryu test results to a detailed JSON report
+        that is saved in specified location.
+        This is an internal function for RyuTester.
+
+        config : dict
+            Configuration for the program.
+            Since this is an internal function, config should
+            have been checked by the calling function in RyuTester.
+        ryu_path : str
+            path/to/ryu/results
+        json_path : str
+            path/to/json/results
+    """
     verbose = config['verbose']
 
-    Core.verbose_msg('Main: Saving detailed results to {}.'.format(json_path), verbose)
+    Core.verbose_msg('Main: Saving detailed results to {}.' \
+                      .format(json_path), \
+                     verbose)
 
     results = {}
     errors = []
+    line = ""
+
+    with open(ryu_path, 'r') as ryu_file:
+        ryu_results = iter(ryu_file.readlines())
+
+    try:
+        while True:
+            """ Get test name, change to more human readable version.
+                type: 00_TESTNAME (optional)
+                         to 
+                abv TESTNAME (optional)
+            """
+
+            """ Test results finished. We're done. """
+            if 'Test end' in line:
+                break
+
+            """ Ryu test types and their abbreviations """
+            test_types = ['action: set_field:', 'action:', 'group',
+                          'match:', 'meter:']
+            test_abbrv = ['asf', 'act', 'grp', 'mat', 'mtr']
+            while not any(test in line for test in test_types):
+                line = next(ryu_results).strip()
+
+            for test, abbv in zip(test_types, test_abbrv):
+                if line.startswith(test):
+                    after_test = line[len(test):].strip()
+                    test_name = after_test[after_test.index('_')+1:].strip()
+                    cur_test = '{} {}'.format(abbv, test_name)
+                    results[cur_test] = {}
+                    break
+
+            """ Get more specific test results.
+                /loc/of(config=value)/test-->'command to switch' OK/ERROR
+                    Reason for error, if any.
+                Don't accidentally include another test's results in
+                current test. (Hence the while loop's condition)
+                Other things, like reconnecting to the switches, can
+                occur within the test that do not conform to testing
+                patterns.
+            """
+            line = next(ryu_results).strip()
+            while not any(test in line for test in test_types):
+                """ Test results finished. We're done. """
+                if 'Test end' in line:
+                    break
+
+                if '-->' in line:
+                    test_name = line[:line.index('-->')].strip()
+                    after = line[line.index('-->')+3:].strip("' ")
+                    if line.endswith('OK'):
+                        result = 'OK'
+                        details = after[:-len(result)]
+                    elif line.endswith('ERROR'):
+                        result = 'ERROR'
+                        details = after[:-len(result)]
+                        details = next(ryu_results).strip("' ") + '. ' \
+                                  + details
+                    else:
+                        Core.fatal_error("Can't identify: {}".format(line))
+
+                    results[cur_test][test_name] = {
+                        'result':result,
+                        'detail':details
+                    }
+
+                line = next(ryu_results).strip()
+    except StopIteration:
+        pass
+
+        
+
+    """
     cur_test = None
     cur_test_results = {}
     i = 0
@@ -115,10 +230,10 @@ def ryu_to_json(config, ryu_results, json_path):
         if 'Test end' in line:
             break
 
-        """
+        ""
             TEST FORMAT
             type: 00_TESTNAME (optional)
-        """
+        ""
         type_tests = ['action: set_field:', 'action:', 'group:',
                        'match:', 'meter:']
         type_shorts = ['asf', 'act', 'grp', 'mat', 'mtr']
@@ -151,6 +266,7 @@ def ryu_to_json(config, ryu_results, json_path):
     # when exiting loop, last tested action is not in action results
     if cur_test:
         results[cur_test] = cur_test_results
+    """
 
     with open(json_path, 'w') as json_file:
         json.dump(results, json_file, sort_keys=True, ensure_ascii=True, indent=4)
@@ -165,7 +281,7 @@ def ryu_to_json(config, ryu_results, json_path):
     csv_path: path/to/csv/file
     verbose: If True, output verbose messages.
 """
-def json_to_csv(config, json_path, csv_path):
+def _json_to_csv(config, json_path, csv_path):
     verbose = config['verbose']
 
     Core.verbose_msg('Main: Converting detailed {} to simplified CSV file {}.'\
