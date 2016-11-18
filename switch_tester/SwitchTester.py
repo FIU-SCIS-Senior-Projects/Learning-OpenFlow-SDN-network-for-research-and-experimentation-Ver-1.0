@@ -4,6 +4,10 @@ from lib import CoreTester as Core
 import os
 import sys
 
+""" Keep Python 3 working with Python 2 """
+if sys.version_info < (3,0):
+    input = raw_input
+
 """
     SwitchTester:
     Utilizes the OFTTester and RyuTester to test target switches, and,
@@ -85,10 +89,21 @@ if __name__ == '__main__':
             """
             target = {}
             # ask for each necessary piece of info about target switch
-            # model (non-empty string)
-            # description
-            # of-version
+            print('Please input target switch information:')
+            print('> Model:', end='  ')
+            target['model'] = input()
+            print('> Description (one line):', end='  ')
+            target['description'] = input()
+            print('> OpenFlow version:', end='  ')
+            target['of-version'] = input()
             # if of_version == '1.3': ask for tester-dpid and target-dpid
+            if target['of-version'] == '1.3':
+                target['ryu'] = {}
+                print('> Ryu Tester Switch DPID:', end='  ')
+                target['ryu']['tester-dpid'] = input()
+                print('> Ryu Target Switch DPID:', end='  ')
+                target['ryu']['target-dpid'] = input()
+            Core.check_switch(target)
 
     """ Select tester based on OpenFlow version supported by the switch """
     # if of_version == 1.0: OFTester
