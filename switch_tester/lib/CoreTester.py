@@ -40,7 +40,7 @@ def check_keys(dict_, keys):
     missing = []
 
     for key in keys:
-        if key not in dict_:
+        if key not in dict_ or  dict_[key] == '':
             missing.append(key)
 
     return missing
