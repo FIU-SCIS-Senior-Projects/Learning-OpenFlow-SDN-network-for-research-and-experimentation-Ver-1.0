@@ -58,7 +58,7 @@ if __name__ == '__main__':
             interactive = True
         elif arg == '-p':
             profile_path = next(args) 
-        elif arg == '-target':
+        elif arg == '-t':
             target_path = next(args)
         elif arg == '-v':
             verbose = True
