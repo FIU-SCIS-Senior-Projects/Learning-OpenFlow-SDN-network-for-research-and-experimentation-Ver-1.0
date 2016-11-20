@@ -26,11 +26,10 @@ if sys.version_info < (3,0):
     -i       Interactive mode.
              (Currently, only used for target switch definition)
     -p       path/to/application/profile
-    -target  path/to/target/switch/config
+    -t       path/to/target/switch/config
     -v       Turn verbose messages on.
 
     PREREQUISITES:
-    Python 3
     Ryu (ryu-manager in particular)
     OFTest
 """
