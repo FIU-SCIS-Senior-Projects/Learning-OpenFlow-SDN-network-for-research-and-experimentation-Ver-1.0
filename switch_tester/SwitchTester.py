@@ -1,3 +1,6 @@
+""" Keep Python 3 print working with Python 2 """
+from __future__ import print_function
+
 from lib import OFTTester as OFTTester
 from lib import RyuTester as RyuTester
 from lib import CoreTester as Core
