@@ -134,8 +134,8 @@ def execute_subprocess(args, stdout_redirect=None, stderr_redirect=None,
             raise subprocess.CalledProcessError(subproc.returncode, args)
             
     except BaseException as e:
-        subproc.kill()
         raise e 
+        subproc.kill()
 
     return stderr_data
 
@@ -167,7 +167,7 @@ def run_switch(cmdline, stdout_redirect=None, stderr_redirect=None):
         rs_stderr = subprocess.PIPE
 
     execute_subprocess(cmdline, stdout_redirect=rs_stdout,
-        stderr_redirect=rs_stderr)
+                       stderr_redirect=rs_stderr, check_return=False)
 
     if(stdout_redirect):
         rs_stdout.close()
@@ -197,8 +197,7 @@ def run_oftest(cmdline, stderr_redirect=None, stderr_to_stdout=False):
         oft_stderr = subprocess.PIPE
 
     stderr_data = execute_subprocess(cmdline, stderr_redirect=subprocess.PIPE,
-        stderr_to_stdout=stderr_to_stdout, check_return=False)
-    
+        stderr_to_stdout=stderr_to_stdout)    
 
     if(stderr_redirect):
         oft_stderr.write(stderr_data)
@@ -257,20 +256,14 @@ def get_results(config, target, profile=None):
     oft_script = '{}/{}'.format(oft_dir, 'oft')
     oft_stderr = '{}/{}.txt'.format(switch_dir, 'stderr')
     oft_xml_dir = '{}/{}/{}'.format(switch_dir, switch_model, 'oftest-xml')
+    Core.create_dir(config, oft_xml_dir)
 
-    oft_cmdline = 'sudo {executable} {oft_script} basic {interfaces} --xunit '
-    oft_cmdline += '--xunit-dir={xunit_dir}'
-    oft_cmdline.format(executable=sys.executable, oft_script=oft_script, 
-        interfaces=interfaces, xunit_dir=oft_xml_dir)
+    oft_cmdline = 'sudo {executable} {oft_script} basic {interfaces} --xunit --xunit-dir={xunit_dir}'.format(executable=sys.executable, oft_script=oft_script, interfaces=interfaces, xunit_dir=oft_xml_dir)
 
-    switch_cmdline = 'sudo {executable} {oft_dir}/run_switch.py'.format(
-        executable=sys.executable, oft_dir=oft_dir)
-    
-    oftest_process = Process(target=run_oftest, args=(oft_cmdline, oft_stderr, 
-        verbose))
+    switch_cmdline = 'sudo {executable} {oft_dir}/run_switch.py'.format(executable=sys.executable, oft_dir=oft_dir)
+
+    oftest_process = Process(target=run_oftest, args=(oft_cmdline, oft_stderr, verbose))
     switch_process = None
-
-    print(switch_cmdline)
 
     if(run_switch_script == True):
         switch_process = Process(target=run_switch, args=(switch_cmdline,))
