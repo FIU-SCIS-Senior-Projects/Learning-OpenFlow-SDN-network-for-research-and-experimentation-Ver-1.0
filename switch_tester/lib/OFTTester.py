@@ -1,3 +1,5 @@
+from . import CoreTester as Core
+
 import copy
 import json
 from multiprocessing import Process
@@ -233,8 +235,8 @@ def get_results(config, target, profile=None):
         Application profile.
     """
 
-    #Core.check_config(config)
-    #Core.check_switch(target)
+    Core.check_config(config)
+    Core.check_switch(target)
 
     backup = config['backup']
     force_test = config['force-test']
@@ -246,7 +248,7 @@ def get_results(config, target, profile=None):
     run_switch_script = target['oftest']['run-switch-script']
 
     switch_dir = '{}/{}'.format(config['directory'], switch_model)
-    #Core.create_dir(config, switch_dir)
+    Core.create_dir(config, switch_dir)
 
     switch_json = '{}/{}.json'.format(switch_dir, switch_model)
     switch_csv = '{}/{}.csv'.format(switch_dir, switch_model)

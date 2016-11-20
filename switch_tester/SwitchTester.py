@@ -1,3 +1,4 @@
+from lib import OFTTester as OFTTester
 from lib import RyuTester as RyuTester
 from lib import CoreTester as Core
 
@@ -106,8 +107,9 @@ if __name__ == '__main__':
             Core.check_switch(target)
 
     """ Select tester based on OpenFlow version supported by the switch """
-    # if of_version == 1.0: OFTester
-    if target['of-version'] == '1.3':
+    if target['of-version'] == '1.0':
+        tester = OFTTester
+    elif target['of-version'] == '1.3':
         tester = RyuTester
     else:
         fatal_error('Unknown OpenFlow version: {}'.format(target['of_version']))

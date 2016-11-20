@@ -163,7 +163,10 @@ def check_switch(switch):
                     Datapath ID of Ryu's target switch.
         oftest : dict
             Contains keys for:
-            TODO
+                interfaces : str
+                    Dataplane interfaces/Port number.
+                run-switch-script: bool
+                    Run run_switch script in OFTest?
     """
 
     """ Check that all necessary non-tester specific keys are in switch.
@@ -181,12 +184,20 @@ def check_switch(switch):
         are in the switch.
         If not, report the missing keys as an error.
     """
-    if switch['of-version'] == '1.3':
+    if switch['of-version'] == '1.0':
+        if 'oftest' not in switch:
+            fatal_error('Switch: Missing key oftest')
+        else:
+            switch = switch['oftest']
+            check_list = ['interfaces', 'run-switch-script']
+    elif switch['of-version'] == '1.3':
         if 'ryu' not in switch:
             fatal_error('Switch: Missing key ryu')
         else:
             switch = switch['ryu']
             check_list = ['tester-dpid', 'target-dpid']
+    else:
+        fatal_error('Switch: of-version not recognized.')
 
     missing = check_keys(switch, check_list)
 
