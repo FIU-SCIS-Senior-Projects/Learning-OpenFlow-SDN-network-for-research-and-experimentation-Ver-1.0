@@ -1,8 +1,0 @@
-<?xml version="1.0" ?>
-<testsuite errors="1" failures="0" name="sample_class1.SampleProtocol2-20161023203932" tests="1" time="4.079">
-        <testcase classname="sample_class1.SampleProtocol2" name="runTest" time="4.079"/>
-        <system-out>
-<![CDATA[]]>    </system-out>
-        <system-err>
-<![CDATA[(S)(S)]]>      </system-err>
-</testsuite>
