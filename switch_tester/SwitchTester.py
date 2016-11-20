@@ -99,14 +99,27 @@ if __name__ == '__main__':
             print('> OpenFlow version:', end='  ')
             target['of-version'] = input()
 
-            # if of-version == 1.0: OFTester
-            if target['of-version'] == '1.3':
+            if target['of-version'] == '1.0':
+                target['oftest'] = {}
+                print('> OFTest Interfaces:', end='  ')
+                target['oftest']['interfaces'] = input()
+                print('> OFTest run switch script? (y/n)', end='  ')
+                while True:
+                    input_ = input()
+                    if len(input_) == 1 and input_ in 'YyNn':
+                        is_yes = input_ in 'Yy'
+                        target['oftest']['run-switch-script'] = is_yes
+                        break
+                    print('>> Invalid input given. Please try again.',
+                          end='  ')
+            elif target['of-version'] == '1.3':
                 target['ryu'] = {}
                 print('> Ryu Tester Switch DPID:', end='  ')
                 target['ryu']['tester-dpid'] = input()
                 print('> Ryu Target Switch DPID:', end='  ')
                 target['ryu']['target-dpid'] = input()
-            Core.check_switch(target)
+
+            Core.check_switch(target) # Catches incorrect of-version anyways
 
     """ Select tester based on OpenFlow version supported by the switch """
     if target['of-version'] == '1.0':
