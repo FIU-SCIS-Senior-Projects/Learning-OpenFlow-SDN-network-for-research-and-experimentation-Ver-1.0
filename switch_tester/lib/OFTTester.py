@@ -129,13 +129,13 @@ def execute_subprocess(args, stdout_redirect=None, stderr_redirect=None,
                 sys.stdout.write(line)
 
         subproc.communicate()
-        
+
         if(check_return == True and subproc.returncode != 0):
             raise subprocess.CalledProcessError(subproc.returncode, args)
             
     except BaseException as e:
-        raise e 
         subproc.kill()
+        raise e 
 
     return stderr_data
 
@@ -166,14 +166,22 @@ def run_switch(cmdline, stdout_redirect=None, stderr_redirect=None):
     else:
         rs_stderr = subprocess.PIPE
 
-    execute_subprocess(cmdline, stdout_redirect=rs_stdout,
-                       stderr_redirect=rs_stderr, check_return=False)
+    error = None
+
+    try:
+        execute_subprocess(cmdline, stdout_redirect=rs_stdout,
+                       stderr_redirect=rs_stderr)
+    except BaseException as e:
+        error = e
 
     if(stdout_redirect):
         rs_stdout.close()
 
     if(stderr_redirect):
         rs_stderr.close()
+
+    if(error):
+        sys.exit(1)
 
 def run_oftest(cmdline, stderr_redirect=None, stderr_to_stdout=False):
     """Runs OFTest.
@@ -252,7 +260,7 @@ def get_results(config, target, profile=None):
     switch_json = '{}/{}.json'.format(switch_dir, switch_model)
     switch_csv = '{}/{}.csv'.format(switch_dir, switch_model)
 
-    oft_dir = '/home/mininet/oftest'
+    oft_dir = '{}/oftest'.format(os.environ['HOME'])
     oft_script = '{}/{}'.format(oft_dir, 'oft')
     oft_stderr = '{}/{}.txt'.format(switch_dir, 'stderr')
     oft_xml_dir = '{}/{}/{}'.format(switch_dir, switch_model, 'oftest-xml')
@@ -273,6 +281,10 @@ def get_results(config, target, profile=None):
 
     if(run_switch_script == True):
         switch_process.join()
+        if(switch_process.exitcode != 0):
+            oftest_process.terminate()
+            Core.fatal_error("Switch stopped abruptly. Terminating.")
+            return
 
     oftest_process.join()
 
