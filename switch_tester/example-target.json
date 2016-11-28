@@ -8,6 +8,6 @@
     },
     "oftest": {
 	"interfaces":"1@veth1,2@veth3",	
-	"run-switch-script":true
+	"run-switch-script":false
     }
 }
