@@ -46,7 +46,7 @@ if __name__ == '__main__':
     verbose = False
 
     """ Go through command line arguments """
-    args = iter(sys.argv[1:])
+    args = iter(sys.argv[sys.argv.index('SwitchTester.py')+1:])
     for arg in args:
         if arg == '-b':
             backup = True
