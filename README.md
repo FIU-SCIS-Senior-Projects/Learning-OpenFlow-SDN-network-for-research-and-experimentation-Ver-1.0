@@ -8,6 +8,8 @@
 * Navigate to the new repo with `cd Learning-OpenFlow-SDN-network-for-research-and-experimentation-Ver-1.0`
 * Run `python setup.py install`
 	* If you have a permission denied error, run with `sudo` or as root
+* You must then move the `switch_tester` directory to your home directory with 'mv switch_tester/ ~/switch_tester'
+	* This must be done because of assumptions made on part of OFTest
 	
 ### Ryu Installation
 * Clone the Ryu git repo in your home directory with `git clone git://github.com/osrg/ryu.git ~/`
