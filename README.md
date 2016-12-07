@@ -2,6 +2,11 @@
 
 ## Installation
 
+### Prerequisites
+* Some virtualization software (VirtualBox, VMWare, etc.)
+* Mininet VM
+* Note: You can download both these things by viewing the [Mininet setup guide](http://mininet.org/download/)
+
 ### OFTest Installation
 * Clone the OFTest git repo in your home directory with `git clone git://github.com/floodlight/oftest ~/`
 	* If you encounter any issues installing OFTest, refer the [official documentation](https://github.com/floodlight/oftest#getting-oftest)
