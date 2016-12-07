@@ -20,7 +20,7 @@
 	* If you have a permission denied error, run with `sudo` or as root
 
 ### SwitchTester
-* Clone the SwitchTester git repo in your home directory with `git clone `.
+* Clone the SwitchTester git repo in your home directory with `git clone https://github.com/FIU-SCIS-Senior-Projects/Learning-OpenFlow-SDN-network-for-research-and-experimentation-Ver-1.0.git`.
 * Pull the develop branch with `git pull origin develop` or the switch-tester branch with `git pull origin switch-tester`
 * Navigate to the new repo with `cd Learning-OpenFlow-SDN-network-for-research-and-experimentation-Ver-1.0`
 * Run `python setup.py install`
