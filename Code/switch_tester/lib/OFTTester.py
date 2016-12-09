@@ -1,6 +1,7 @@
 from . import CoreTester as Core
 
 import copy
+import csv
 import json
 from multiprocessing import Process
 import os
@@ -97,7 +98,7 @@ def generate_json_log(oft_xml_dir, json_path, profile=None):
         json_log_file.write(json_log)
 
 def execute_subprocess(args, stdout_redirect=None, stderr_redirect=None,
-        stderr_to_stdout=False, check_return=True):
+                       stderr_to_stdout=False, check_return=False):
     """Executes a subprocess specified by a command line.
     
     args : string
@@ -132,8 +133,12 @@ def execute_subprocess(args, stdout_redirect=None, stderr_redirect=None,
 
         if(check_return == True and subproc.returncode != 0):
             raise subprocess.CalledProcessError(subproc.returncode, args)
-            
+
+    except subprocess.CalledProcessError as e:
+        print('CalledProcessError')
+        raise e
     except BaseException as e:
+        print('BaseException')
         subproc.kill()
         raise e 
 
@@ -295,9 +300,57 @@ def judge_results(config, target, profile):
 	""" Judges CSV results against application profile's list of compatibility
 	checks and outputs the judgement. Judgement is PASS/FAIL in regards to
 	target switch and application profile.
+
+        config : dict
+            Configuration of program.
+        target : dict
+            Target switch configuration.
+        profile : dict
+            Application profile information.
+
 	"""
 	
-	return
+        Core.check_config(config)
+        Core.check_switch(target)
+        Core.check_profile(profile)
+
+        verbose = config['verbose']
+
+        switch_model = target['model']
+        switch_dir = '{}/{}'.format(config['directory'], switch_model)
+        csv_path = '{}/{}.csv'.format(switch_dir, switch_model)
+
+        if not os.path.exists(csv_path):
+            Core.fatal_error('Cannot find CSV result file {}.'.format(csv_path))
+
+        Core.verbose_msg('Main: Beginning judging.', verbose)
+
+        failures = []
+        comp_list = profile['compatibility'][:]
+        with open(csv_path, 'r') as csv_file:
+
+            csv_reader = csv.reader(csv_file)
+
+            for name, result in csv_reader:
+                
+                if name in comp_list:
+                    
+                    if result != 'OK':
+                        failures.append( (name, result) )
+       
+                    comp_list.remove(name)
+
+        if (len(failures) > 0 or len(comp_list) > 0):
+            print('{}: {} FAILED'.format(profile['name'], target['model']))
+
+            for name, result in failures:
+                Core.verbose_msg('FAILED TESTS: {},{}'.format(name, result),\
+                             verbose)
+
+            for name in comp_list:
+                Core.verbose_msg('NOT FOUND: {}'.format(name), verbose)
+        else:
+            print('{}: {} PASSED'.format(profile['name'], target['model']))
 
 def json_report_to_csv(json_path, csv_path):
     """Generates CSV report from JSON report, outputting only rows of test case
