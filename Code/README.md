@@ -30,7 +30,7 @@
 
 ## Directory Structure
 
-	-switch_tester/					# SwitchTester application
+	-switch_tester/					# SwitchTester application  
 		-lib/						# imported modules				
 			-__init__.py					# required by setup.py
 			-CoreTester.py					# CoreTester module
