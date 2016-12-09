@@ -27,3 +27,18 @@
 	* If you have a permission denied error, run with `sudo` or as root
 * You must then move the `switch_tester` directory to your home directory with `mv switch_tester/ ~/switch_tester`
 	* This must be done because of assumptions made on part of OFTest
+
+## Directory Structure
+
+	-switch_tester/		# SwitchTester application
+		-lib/				
+			-__init__.py		# required by setup.py
+			-CoreTester.py		# CoreTester module
+			-OFTTester.py		# OFTTester module
+			-RyuTester.py		# RyuTester module
+		-__init__.py		# required by setup.py
+		-SwitchTester.py	# SwitchTester entry point
+		-example_profile.json	# example profile configuration
+		-example_target.json	# example target switch configuration
+	-README.md		# the file you are looking at now
+	-setup.py		# installation script
