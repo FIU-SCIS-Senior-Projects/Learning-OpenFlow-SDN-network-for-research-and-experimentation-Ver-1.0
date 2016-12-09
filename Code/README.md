@@ -5,7 +5,7 @@
 ### Prerequisites
 * Some virtualization software (VirtualBox, VMWare, etc.)
 * Mininet VM
-* Note: You can download both these things by viewing the [Mininet setup guide](http://mininet.org/download/)
+	* Note: You can download virtualization software and the Mininet VM by viewing the [Mininet setup guide](http://mininet.org/download/)
 * OFTest
 * Ryu
 
