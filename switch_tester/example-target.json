@@ -1,0 +1,13 @@
+{
+    "model":"test_switch",
+    "description":"whatever",
+    "of-version":"1.0",
+    "ryu": {
+	"tester-dpid":"1",
+	"target-dpid":"2"
+    },
+    "oftest": {
+	"interfaces":"1@veth1,2@veth3",	
+	"run-switch-script":false
+    }
+}
