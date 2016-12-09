@@ -31,7 +31,7 @@
 ## Directory Structure
 
 	-switch_tester/					# SwitchTester application
-		-lib/				
+		-lib/						# imported modules				
 			-__init__.py					# required by setup.py
 			-CoreTester.py					# CoreTester module
 			-OFTTester.py					# OFTTester module
