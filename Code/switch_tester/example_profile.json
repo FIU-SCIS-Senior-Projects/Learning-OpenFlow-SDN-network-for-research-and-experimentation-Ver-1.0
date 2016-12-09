@@ -1,0 +1,10 @@
+{
+    "name":"oess",
+    "of_version":"of10",
+    "compatibility":[
+	"basic.EchoWithData",
+	"basic.PacketInBroadcastCheck",
+	"basic.DescStatsGet",
+	"basic.PacketOut"
+    ]
+}
