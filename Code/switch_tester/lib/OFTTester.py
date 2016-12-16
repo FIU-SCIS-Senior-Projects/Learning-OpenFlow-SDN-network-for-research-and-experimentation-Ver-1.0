@@ -271,7 +271,8 @@ def get_results(config, target, profile=None):
     oft_xml_dir = '{}/{}/{}'.format(switch_dir, switch_model, 'oftest-xml')
     Core.create_dir(config, oft_xml_dir)
 
-    oft_cmdline = 'sudo {executable} {oft_script} basic {interfaces} --xunit --xunit-dir={xunit_dir}'.format(executable=sys.executable, oft_script=oft_script, interfaces=interfaces, xunit_dir=oft_xml_dir)
+    # Put 'basic' between {oft-script} and {interfaces} to only use the basic test suite in OFTest - it is much faster.
+    oft_cmdline = 'sudo {executable} {oft_script} {interfaces} --xunit --xunit-dir={xunit_dir}'.format(executable=sys.executable, oft_script=oft_script, interfaces=interfaces, xunit_dir=oft_xml_dir)
 
     switch_cmdline = 'sudo {executable} {oft_dir}/run_switch.py'.format(executable=sys.executable, oft_dir=oft_dir)
 
